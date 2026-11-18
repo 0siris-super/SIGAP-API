@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoring Perumahan Sigap Api</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="alertTop" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span></div>
+
+<header class="topbar">
+  <div class="logo-slot"><img src="assets/logo-kiri.png" alt="Logo kiri" onerror="this.remove()"></div>
+  <h1>Monitoring Perumahan Sigap Api</h1>
+  <div class="logo-slot"><img src="assets/logo-kanan.png" alt="Logo kanan" onerror="this.remove()"></div>
+</header>
+
+<main class="layout">
+  <section class="panel">
+    <h2>Denah perumahan</h2>
+    <svg id="map" viewBox="0 0 800 560" aria-label="Denah perumahan"></svg>
+  </section>
+  <aside class="panel side">
+    <div id="listView"><h2>Daftar rumah</h2><ul id="houseList"></ul></div>
+    <div id="detail" hidden></div>
+  </aside>
+</main>
+
+<div id="alertBottom" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span></div>
+
+<footer>
+  <span id="conn"></span>
+  <details id="simBox">
+    <summary>Panel simulasi (mode demo)</summary>
+    <select id="simHouse"></select>
+    <button id="simFire">Simulasikan kebakaran</button>
+    <button id="simReset">Reset semua</button>
+  </details>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>
