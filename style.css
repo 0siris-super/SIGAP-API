@@ -77,10 +77,10 @@ footer button,footer select{font:inherit;padding:4px 10px}
 .ackbox .ack-btn{font:inherit;font-weight:700;color:#fff;background:var(--fire);border:0;border-radius:6px;padding:8px 16px;cursor:pointer}
 .ackbox .ack-btn:hover{background:#A81C2B}
 
-.logo-slot.has-img{border:0;border-radius:0;overflow:visible}
-.logo-slot.has-img::before{display:none}
-.logo-slot img{background:none;object-fit:contain}
-
 #vC[data-o=on]{color:var(--safe)}#vC[data-o=off]{color:#5A6676}
 #vCt{color:#5A6676}
 #offInfo{font-weight:600;color:var(--warn)}
+
+.logo-slot.has-img{border:0;border-radius:0;overflow:visible}
+.logo-slot.has-img::before{display:none}
+.logo-slot img{background:none;object-fit:contain}
