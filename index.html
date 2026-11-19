@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="alertTop" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span></div>
+<div id="alertTop" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span><button class="ack-btn" type="button">Matikan status bahaya</button></div>
 
 <header class="topbar">
   <div class="logo-slot"><img src="assets/logo-kiri.png" alt="Logo kiri" onerror="this.remove()"></div>
@@ -28,14 +28,17 @@
   </aside>
 </main>
 
-<div id="alertBottom" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span></div>
+<div id="alertBottom" class="alert" role="alert" hidden><strong>ALERT!!!</strong><span></span><button class="ack-btn" type="button">Matikan status bahaya</button></div>
 
 <footer>
   <span id="conn"></span>
+  <span id="offInfo"></span>
   <details id="simBox">
     <summary>Panel simulasi (mode demo)</summary>
     <select id="simHouse"></select>
     <button id="simFire">Simulasikan kebakaran</button>
+    <button id="simOff">Putuskan alat (offline)</button>
+    <button id="simOn">Sambungkan alat</button>
     <button id="simReset">Reset semua</button>
   </details>
 </footer>
