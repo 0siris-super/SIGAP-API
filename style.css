@@ -49,3 +49,34 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;paddin
 footer button,footer select{font:inherit;padding:4px 10px}
 @media(max-width:900px){.layout{grid-template-columns:1fr;padding:12px}.topbar{grid-template-columns:56px 1fr 56px;padding:10px 12px}.logo-slot{width:52px;height:52px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Status online/offline + status "Ditangani" ===== */
+.item{grid-template-columns:44px 1fr auto}
+.stat{display:grid;justify-items:end;gap:4px}
+.conn{font-size:12px;font-weight:600;color:var(--safe);white-space:nowrap}
+.conn::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:5px}
+.conn[data-o=off]{color:#5A6676}
+.item[data-s=fire] .conn[data-o=off]{color:var(--fire)}
+.item[data-o=off] .ico{border-style:dashed}
+.item[data-s=ack]{border-left-color:#5A6676;background:#F3F6FB}
+.item[data-s=ack] .badge{background:#5A6676}
+
+.house .off{display:none;font:700 11px Barlow;fill:#5A6676;paint-order:stroke;stroke:#fff;stroke-width:3px}
+.house[data-o=off] .off{display:inline}
+.house[data-o=off] .body{stroke-dasharray:5 3}
+.house[data-s=fire][data-o=off] .off{fill:var(--fire)}
+.house[data-s=ack] .lamp{fill:#8A97A8;stroke:var(--ink)}
+.house[data-s=ack] .body{stroke:#5A6676}
+
+.alert .ack-btn{font:700 16px Barlow,sans-serif;padding:4px 14px;border-radius:6px;border:2px solid #fff;background:#fff;color:var(--fire);cursor:pointer}
+.alert .ack-btn:hover{background:#FFE3E6}
+
+.ackbox{border:1px solid var(--fire);background:#FFF1F2;border-radius:8px;padding:12px 16px;margin-bottom:12px}
+.ackbox.done{border-color:var(--line);background:#F3F6FB}
+.ackbox p{margin:0 0 10px;font-weight:600}.ackbox.done p{margin:0;color:#5A6676}
+.ackbox .ack-btn{font:inherit;font-weight:700;color:#fff;background:var(--fire);border:0;border-radius:6px;padding:8px 16px;cursor:pointer}
+.ackbox .ack-btn:hover{background:#A81C2B}
+
+#vC[data-o=on]{color:var(--safe)}#vC[data-o=off]{color:#5A6676}
+#vCt{color:#5A6676}
+#offInfo{font-weight:600;color:var(--warn)}
