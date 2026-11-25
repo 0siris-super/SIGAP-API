@@ -1,23 +1,25 @@
 /* ===== Konfigurasi ===== */
 const CONFIG = {
-  mode: 'demo',            // 'demo' = data simulasi, 'api' = ambil data dari server
-  apiUrl: '/api/houses',   // harus mengembalikan [{code:'SA-001', temp:30, smoke:90, flame:false, ts:1767000000000}, ...]
-                           // ts (opsional tapi disarankan) = waktu data terakhir dari alat, dalam milidetik atau detik
-  ackUrl: '',              // opsional: alamat POST untuk memberi tahu server saat status bahaya dimatikan, mis. '/api/ack'
-  pollMs: 3000,
+  mode: 'mqtt',            // mode awal: 'mqtt' = data real dari HiveMQ, 'demo' = simulasi. Tombol di halaman bisa mengganti.
+  mqtt: {
+    url:  'wss://broker.hivemq.com:8884/mqtt', // broker publik HiveMQ, WebSocket + TLS
+    user: '',                // broker publik tidak memakai username/password
+    pass: '',
+    root: 'sigapapi' // GANTI dengan kode acak milikmu, harus sama dengan TOPIC_ROOT di firmware
+  },
   offlineMs: 15000,        // alat dianggap offline kalau tidak ada data baru selama sekian milidetik
   T: { tw: 40, tf: 60, sw: 300, sf: 600 } // batas waspada/kebakaran: suhu (°C) dan asap
 };
 
 /* ===== Data rumah: kode unik + posisi di denah ===== */
 const houses = [
-  { code:'SA-001', name:'Rumah 1', addr:'Blok A', x:170, y:92 },
-  { code:'SA-002', name:'Rumah 2', addr:'Blok A', x:600, y:92 },
+  { code:'SA-001', name:'Rumah 1', addr:'Blok A', x:170, y:100 },
+  { code:'SA-002', name:'Rumah 2', addr:'Blok A', x:600, y:100 },
   { code:'SA-003', name:'Rumah 3', addr:'Blok B', x:115, y:405 },
   { code:'SA-004', name:'Rumah 4', addr:'Blok C', x:650, y:268 },
-  { code:'SA-005', name:'Rumah 5', addr:'Blok C', x:430, y:340 },
-  { code:'SA-006', name:'Rumah 6', addr:'Blok D', x:600, y:488 }
-].map(h => ({ ...h, temp:28, smoke:80, flame:false, lastSeen:0, ack:false }));
+  { code:'SA-005', name:'Rumah 5', addr:'Blok C', x:430, y:330 },
+  { code:'SA-006', name:'Rumah 6', addr:'Blok D', x:600, y:492 }
+].map(h => ({ ...h, temp:28, smoke:80, flame:false, lastSeen:0, ack:false, lwt:false }));
 
 const $ = s => document.querySelector(s);
 const get = c => houses.find(h => h.code === c);
@@ -30,19 +32,20 @@ const status = h => (h.flame || h.smoke >= CONFIG.T.sf || h.temp >= CONFIG.T.tf)
   : (h.smoke >= CONFIG.T.sw || h.temp >= CONFIG.T.tw) ? 'warn' : 'safe';
 /* status yang ditampilkan: kebakaran yang sudah dimatikan dari web tampil sebagai "Ditangani" */
 const shown = h => { const s = status(h); return (s === 'fire' && h.ack) ? 'ack' : s; };
-const online = h => h.lastSeen > 0 && Date.now() - h.lastSeen <= CONFIG.offlineMs;
+/* online = ada data baru dalam offlineMs DAN broker tidak mengumumkan alat putus (LWT) */
+const online = h => !h.lwt && h.lastSeen > 0 && Date.now() - h.lastSeen <= CONFIG.offlineMs;
 const connText = h => online(h) ? 'Online' : (h.lastSeen ? 'Offline · ' + clock(h.lastSeen) : 'Belum ada data');
 const activeFires = () => houses.filter(h => status(h) === 'fire' && !h.ack);
 let selected = null;
 
 /* ===== Bangun denah (biru) ===== */
-const blocks = [[30,30,740,125],[30,195,170,335],[250,195,520,205],[250,435,520,95]];
+const blocks = [[30,30,740,135],[30,195,170,355],[250,195,520,200],[250,425,520,125]];
 $('#map').innerHTML =
   blocks.map(b => `<rect class="block" x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" rx="6"/>`).join('') +
   houses.map(h => `<g class="house" data-code="${h.code}" tabindex="0" role="button" aria-label="${h.name}, kode ${h.code}" transform="translate(${h.x} ${h.y})">
     <circle class="halo" cy="-34" r="11"/><circle class="lamp" cy="-34" r="8"/>
     <path class="roof" d="M-26 -4L0 -24L26 -4Z"/><rect class="body" x="-20" y="-4" width="40" height="28"/>
-    <text class="off" y="-52">OFFLINE</text>
+    <g class="off"><rect x="-27" y="-65" width="54" height="15" rx="7"/><text y="-54">OFFLINE</text></g>
     <text y="42">${h.name}</text><text class="code" y="55">${h.code}</text></g>`).join('');
 
 /* ===== Bangun daftar rumah (merah) ===== */
@@ -84,17 +87,13 @@ function openDetail(code) {
 }
 function closeDetail() { selected = null; $('#detail').hidden = true; $('#listView').hidden = false; render(); }
 
-/* ===== Matikan status bahaya dari web ===== */
+/* ===== Matikan status bahaya dari web (hanya mengatur tampilan di browser ini) ===== */
 function ackFire(codes) {
   const targets = codes.map(get).filter(h => h && status(h) === 'fire' && !h.ack);
   if (!targets.length) return;
   const names = targets.map(h => h.name).join(', ');
   if (!confirm(`Matikan status bahaya untuk ${names}?\nStatus akan aktif lagi otomatis kalau terjadi kebakaran baru.`)) return;
-  targets.forEach(h => {
-    h.ack = true;
-    if (CONFIG.mode === 'api' && CONFIG.ackUrl)
-      fetch(CONFIG.ackUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ code:h.code }) }).catch(() => {});
-  });
+  targets.forEach(h => { h.ack = true; });
   render();
 }
 
@@ -154,19 +153,44 @@ document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('house')) { e.preventDefault(); openDetail(e.target.dataset.code); }
 });
 
-/* Dipanggil dari WebSocket/MQTT/Firebase: updateHouse('SA-002', {temp:70, smoke:800, flame:true}) */
+/* Dipanggil oleh MQTT/WebSocket/Firebase: updateHouse('SA-002', {temp:70, smoke:800, flame:true}) */
 function updateHouse(code, data) {
   const h = get(code); if (!h) return;
   const { ts, ...vals } = data;
   Object.assign(h, vals);
+  h.lwt = false;
   h.lastSeen = ts ? (ts < 1e12 ? ts * 1000 : ts) : Date.now();
   render();
 }
 window.updateHouse = updateHouse;
 
-/* ===== Mode demo ===== */
-const burning = new Set(), dead = new Set();
+/* ===== Sumber data: MQTT (real) ===== */
 function setConn(t) { $('#conn').textContent = t; }
+function startMqtt() {
+  const m = CONFIG.mqtt;
+  const c = mqtt.connect(m.url, {
+    username: m.user || undefined, password: m.pass || undefined,
+    reconnectPeriod: 3000, connectTimeout: 8000,
+    clientId: 'web-' + Math.random().toString(16).slice(2, 10)   // harus unik tiap pengunjung
+  });
+  c.on('connect', () => { setConn('Terhubung ke HiveMQ, menunggu data alat'); c.subscribe([m.root + '/+/data', m.root + '/+/status']); });
+  c.on('reconnect', () => setConn('Menyambung ulang ke HiveMQ...'));
+  c.on('close', () => setConn('Terputus dari broker'));
+  c.on('error', e => setConn('Gagal terhubung: ' + e.message));
+  c.on('message', (topic, buf) => {
+    const [, code, kind] = topic.split('/'), h = get(code), txt = buf.toString();
+    if (!h) return;
+    if (kind === 'status') { h.lwt = txt === 'offline'; render(); }      // "offline" dari LWT = alat putus
+    else if (kind === 'data') {
+      try { const d = JSON.parse(txt); updateHouse(code, { temp:+d.temp, smoke:+d.smoke, flame:!!d.flame }); }
+      catch { console.warn('Data tidak valid:', txt); }
+    }
+  });
+  return c;
+}
+
+/* ===== Sumber data: simulasi ===== */
+const burning = new Set(), dead = new Set();
 function tick() {
   const now = Date.now();
   houses.forEach(h => {
@@ -188,23 +212,26 @@ $('#simOff').onclick = () => dead.add($('#simHouse').value);
 $('#simOn').onclick = () => dead.delete($('#simHouse').value);
 $('#simReset').onclick = () => { burning.clear(); dead.clear(); };
 
-/* ===== Mode API ===== */
-async function poll() {
-  try {
-    const data = await (await fetch(CONFIG.apiUrl)).json();
-    data.forEach(d => {
-      const h = get(d.code); if (!h) return;
-      const { ts, ...vals } = d;
-      Object.assign(h, vals);
-      h.lastSeen = ts ? (ts < 1e12 ? ts * 1000 : ts) : Date.now();
-    });
-    setConn('Server terhubung, diperbarui ' + clock(Date.now()));
-  } catch { setConn('Server terputus, mencoba lagi...'); }
+/* ===== Ganti sumber data: 'mqtt' (real) atau 'demo' (simulasi) ===== */
+let timer = null, client = null, current = null;
+function setMode(m) {
+  if (timer) { clearInterval(timer); timer = null; }
+  if (client) { client.end(true); client = null; }
+  current = m;
+  houses.forEach(h => Object.assign(h, { temp:28, smoke:80, flame:false, lastSeen:0, ack:false, lwt:false }));  // buang data mode sebelumnya
+  burning.clear(); dead.clear(); selected = null; $('#detail').hidden = true; $('#listView').hidden = false;
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  $('#simBox').hidden = m !== 'demo';
+  setText($('#modeNote'), m === 'demo' ? 'Data buatan untuk uji tampilan, bukan dari alat.' : 'Data asli dari alat ESP32 lewat HiveMQ.');
+  try { localStorage.setItem('sigapMode', m); } catch {}
+  if (m === 'demo') { setConn('Mode simulasi aktif'); tick(); timer = setInterval(tick, 2000); }
+  else if (typeof mqtt === 'undefined') setConn('Pustaka MQTT gagal dimuat, cek koneksi internet');
+  else { setConn('Menyambung ke HiveMQ...'); client = startMqtt(); }
   render();
 }
-
-if (CONFIG.mode === 'api') { $('#simBox').hidden = true; poll(); setInterval(poll, CONFIG.pollMs); }
-else { setConn('Mode demo: data simulasi'); tick(); setInterval(tick, 2000); }
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+let saved = null; try { saved = localStorage.getItem('sigapMode'); } catch {}
+setMode(saved === 'demo' || saved === 'mqtt' ? saved : CONFIG.mode);
 
 /* cek status online/offline tiap detik, supaya alat yang berhenti kirim data langsung terdeteksi */
 setInterval(render, 1000);
