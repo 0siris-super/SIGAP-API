@@ -17,6 +17,10 @@
   <div class="logo-slot"><img src="assets/logo-kanan.png" alt="Logo kanan" onload="this.parentNode.classList.add('has-img')" onerror="this.remove()"></div>
 </header>
 
+<div class="modebar"><span>Sumber data</span>
+  <div class="seg"><button type="button" data-mode="mqtt">Data real (HiveMQ)</button><button type="button" data-mode="demo">Simulasi</button></div>
+  <small id="modeNote"></small></div>
+
 <main class="layout">
   <section class="panel">
     <h2>Denah perumahan</h2>
@@ -33,7 +37,7 @@
 <footer>
   <span id="conn"></span>
   <span id="offInfo"></span>
-  <details id="simBox">
+  <details id="simBox" open>
     <summary>Panel simulasi (mode demo)</summary>
     <select id="simHouse"></select>
     <button id="simFire">Simulasikan kebakaran</button>
@@ -42,6 +46,7 @@
     <button id="simReset">Reset semua</button>
   </details>
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
